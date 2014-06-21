@@ -1,4 +1,17 @@
 from __future__ import division
+
+import sip
+try:
+    sip.setapi('QDate', 2)
+    sip.setapi('QDateTime', 2)
+    sip.setapi('QString', 2)
+    sip.setapi('QTextStream', 2)
+    sip.setapi('QTime', 2)
+    sip.setapi('QUrl', 2)
+    sip.setapi('QVariant', 2)
+except ValueError, e:
+    raise RuntimeError('Could not set API version (%s): did you import PyQt4 directly?' % e)
+
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
@@ -9,9 +22,13 @@ from util import nabs
 from plotparamtree import createPlotParamTree, printParamDict
 from datastream import DataStream, TimeSeries, EyeSampleDataSource
 from graphics import EyeSampleTracePlot, DataStats
+from ipythonConsole import EmbeddedIPythonConsole
 
-# file to load
-DATA_FILE = r"C:\Users\Sol\Downloads\converted_edq\output\t60xl\t60xl_events_1.npy"
+APPGUI=dict(size=(1200,900),
+            console_area=('bottom',(1.0,.35)),
+            data_info_stats_area=('left',(.15,.65)),
+            data_views_area=('right',(.85,.65))
+            )
 
 class ContextualStateAction(QtGui.QAction):
     def __init__(self,*args,**kwargs):
@@ -41,18 +58,25 @@ class EyePlot(QtGui.QMainWindow):
 
         self._area = DockArea()
         self.setCentralWidget(self._area)
-        self.setWindowTitle('Eye Sample Data')
-        self.resize(1280,800)
+        self.setWindowTitle('EDQview')
 
         self._file_data_dock=None
         self._data_region_dock=None
         self._region_tree_dock=None
         self._param_tree_dock=None
-
+        self.console_dock=None
         self.createDocks()
 
+        self.resize(*APPGUI.get('size'))
+
+        self.show()
 
     def createDocks(self,file_name="File Data"):
+        if self.console_dock:
+            self.ipython_console.clearUserNamespace()#deleteUserNamespaceKeys(['edqplot_app','edq_datasource'])
+            self.ipython_console.stop()
+            self.console_dock.setParent(None)
+            self.console_dock.label.setParent(None)
         if self._region_tree_dock:
            self._region_tree_dock.setParent(None)
            self._region_tree_dock.label.setParent(None)
@@ -70,20 +94,32 @@ class EyePlot(QtGui.QMainWindow):
            self._file_data_dock.label.setParent(None)
 
 
+        appsize=APPGUI.get('size')
 
-        self._file_data_dock = Dock(file_name, size=(900,400))
-        self._area.addDock(self._file_data_dock, 'top')
+        pos,(wx,wy) = APPGUI.get('data_views_area')
+        wx=wx*appsize[0]
+        wy=wy*appsize[1]
 
-        self._data_region_dock = Dock("Selected Region", size=(900,400))
-        self._area.addDock(self._data_region_dock, 'bottom')
+        self._file_data_dock = Dock(file_name, size=(wx,wy/2))
+        self._area.addDock(self._file_data_dock, pos)
 
-        self._param_tree_dock = Dock("Settings",size=(380,800))
-        self._area.addDock(self._param_tree_dock, 'left')
+        self._data_region_dock = Dock("Selected Region", size=(wx,wy/2))
+        self._area.addDock(self._data_region_dock, 'bottom',self._file_data_dock)
 
-        self._region_tree_dock = Dock("Stats",size=(380,800))
+        pos,(wx,wy) = APPGUI.get('data_info_stats_area')
+        wx=wx*appsize[0]
+        wy=wy*appsize[1]
+
+        self._param_tree_dock = Dock("Settings",size=(wx,wy))
+        self._area.addDock(self._param_tree_dock, pos)
+
+        self._region_tree_dock = Dock("Stats",size=(wx,wy))
         self._area.addDock(self._region_tree_dock, 'above', self._param_tree_dock)
 
 
+        self.createEmbeddedIPythonConsoleDock()
+
+        self.ipython_console.initDataState(self)
 
     def createActions(self):
         atext='Open an EDQ npy File.'
@@ -223,6 +259,17 @@ class EyePlot(QtGui.QMainWindow):
         self._data_region_plot.changePlotAttribute(param_handle, new_value)
         self._file_data_plot.changePlotAttribute(param_handle, new_value)
 
+    def createEmbeddedIPythonConsoleDock(self):
+        appsize=APPGUI.get('size')
+        dock_pos,dock_size_prop=APPGUI.get('console_area')
+        dwidth=int(dock_size_prop[0]*appsize[0])
+        dheight=int(dock_size_prop[1]*appsize[1])
+        self.console_dock = Dock("Console", size=(dwidth,dheight))
+        self.ipython_console=EmbeddedIPythonConsole()
+        self.console_dock.addWidget(self.ipython_console.getWidget())
+        self._area.addDock(self.console_dock, dock_pos)
+        #self.sigCurrentProjectChanged.connect(self.ipython_console.handleProjectChange)
+
     def free(self):
         if self._data_source:
             self._data_source.close()
@@ -257,6 +304,5 @@ if __name__ == '__main__':
     app = QtGui.QApplication([])
 
     win = EyePlot()
-    win.show()
 
     QtGui.QApplication.instance().exec_()

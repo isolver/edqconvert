@@ -1,0 +1,13 @@
+__author__ = 'Sol'
+et_nan_values = dict()
+et_nan_values['eyefollower'] = 0.0,0.0
+et_nan_values['eyelink'] =  0.0,0.0
+et_nan_values['eyetribe'] = -840.0, 525.0
+et_nan_values['hispeed1250'] =  0.0,0.0
+et_nan_values['hispeed240'] =  0.0,0.0
+et_nan_values['red250'] =  0.0,0.0
+et_nan_values['red500'] =  0.0,0.0
+et_nan_values['redm'] =  0.0,0.0
+et_nan_values['t60xl'] = -1.0,-1.0
+et_nan_values['tx300'] = -1.0,-1.0
+et_nan_values['x2'] = -1.0,-1.0

@@ -1,0 +1,73 @@
+# Each dict is converted into a tree of pygraphqt Parameter objects,
+# where each node of the tree can be referenced directly using the node
+# label, which must be unique within all levels of the current tree
+#
+# pyYAML OrderedDict extension must be used when reading file for dict key: value
+# order is maintained.
+#
+
+
+data_selection:
+    name: Eye Sample Selection
+    type: group
+    children:
+        session_id_selection:
+            name: Session ID
+            type: list
+            values: ^session_ids^
+            value: ^selected_session_id^
+        target_period_range_selection:
+            name: Target Display Index Selection
+            type: AplusBisC
+plot_gui:
+    name: Plot GUI
+    type: group
+    children:
+        trace_colors:
+            name: Trace Colors
+            type: group
+            children:
+                left_eye_trace_colors:
+                    name: Left Eye
+                    type: group
+                    children:
+                        left_angle_x_pen_color:
+                            name: Horizontal Position
+                            type: color
+                            value: [46,127,75]
+                        left_angle_y_pen_color:
+                            name: Vertical Position
+                            type: color
+                            value: [82,229,134]
+#                        left_eye_pupil_trace_color:
+#                            name: Pupil Size
+#                            type: color
+#                            value: FAD
+                right_eye_trace_colors:
+                    name: Right Eye
+                    type: group
+                    children:
+                        right_angle_x_pen_color:
+                            name: Horizontal Position
+                            type: color
+                            value: [10,67,102]
+                        right_angle_y_pen_color:
+                            name: Vertical Position
+                            type: color
+                            value: [11,145,229]
+#                        right_eye_pupil_trace_color:
+#                            name: Pupil Size
+#                            type: color
+#                            value: 7AD
+                target_trace_colors:
+                    name: Target Stimulus
+                    type: group
+                    children:
+                        target_angle_x_pen_color:
+                            name: Horizontal Position
+                            type: color
+                            value: [127,0,0]
+                        target_angle_y_pen_color:
+                            name: Vertical Position
+                            type: color
+                            value: [255,76,76]

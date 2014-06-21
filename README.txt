@@ -1,3 +1,5 @@
+Note: See README in 'plot' folder for quick info about running edqplot 
+
 ===================================
 EDQ Result Files Conversion Script
 ===================================

@@ -140,7 +140,7 @@ def printParamDict(p):
     for param_label, param_path in  param_node_dict.items():
         print param_label," :: ", param_path
 
-def createPlotParamTree(session_ids, selected_session_id, trial_ids, selected_trial_ids):
+def createPlotParamTree(session_ids, selected_session_id, trial_ids, selected_trial_ids, t=None):
     ## Create tree of Parameter objects
     trial_id_range=[trial_ids[0], trial_ids[-1]]
     starting_trial_id = selected_trial_ids[0]
@@ -192,6 +192,7 @@ def createPlotParamTree(session_ids, selected_session_id, trial_ids, selected_tr
 
     p.sigTreeStateChanged.connect(change)
 
-    t = ParameterTree()
+    if t is None:
+        t = ParameterTree()
     t.setParameters(p, showTop=False)
     return t, p

@@ -23,6 +23,10 @@ plot_gui:
     name: Plot GUI
     type: group
     children:
+        show_traceplot_legend:
+            name: Display Trace Legend
+            type: bool
+            value: False
         trace_colors:
             name: Trace Colors
             type: group

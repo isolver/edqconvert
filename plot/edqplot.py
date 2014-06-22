@@ -18,16 +18,16 @@ from pyqtgraph.Qt import QtGui, QtCore
 import os
 from pyqtgraph.dockarea import *
 from collections import OrderedDict
-from util import nabs
+from util import nabs, getIconFilePath
 from plotparamtree import createPlotParamTree, printParamDict
 from datastream import DataStream, TimeSeries, EyeSampleDataSource
 from graphics import EyeSampleTracePlot, DataStats
 from ipythonConsole import EmbeddedIPythonConsole
 
-APPGUI=dict(size=(1200,900),
-            console_area=('bottom',(1.0,.35)),
-            data_info_stats_area=('left',(.15,.65)),
-            data_views_area=('right',(.85,.65))
+APPGUI=dict(size=(1280,1024),
+            console_area=('bottom',(.8,.4)),
+            data_info_stats_area=('left',(.2,1.0)),
+            data_views_area=('right',(.8,.6))
             )
 
 class ContextualStateAction(QtGui.QAction):
@@ -46,7 +46,7 @@ class EyePlot(QtGui.QMainWindow):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
         self._data_source = None
-
+        self._region=None
         self._data_region_plot = None
         self._file_data_plot = None
         self._region_tree = None
@@ -65,47 +65,54 @@ class EyePlot(QtGui.QMainWindow):
         self._region_tree_dock=None
         self._param_tree_dock=None
         self.console_dock=None
+
         self.createDocks()
 
         self.resize(*APPGUI.get('size'))
 
         self.show()
 
-    def createDocks(self,file_name="File Data"):
+
+    def clearDocks(self):
+        #self._area.docks.clear()
         if self.console_dock:
             self.ipython_console.clearUserNamespace()#deleteUserNamespaceKeys(['edqplot_app','edq_datasource'])
             self.ipython_console.stop()
+            self.console_dock.close()
+            self.console_dock.destroy()
             self.console_dock.setParent(None)
             self.console_dock.label.setParent(None)
+
         if self._region_tree_dock:
-           self._region_tree_dock.setParent(None)
-           self._region_tree_dock.label.setParent(None)
+            self._region_tree_dock.close()
+            self._region_tree_dock.destroy()
+            self._region_tree_dock.setParent(None)
+            self._region_tree_dock.label.setParent(None)
 
         if self._param_tree_dock:
-           self._param_tree_dock.setParent(None)
-           self._param_tree_dock.label.setParent(None)
+            self._param_tree_dock.close()
+            self._param_tree_dock.destroy()
+            self._param_tree_dock.setParent(None)
+            self._param_tree_dock.label.setParent(None)
+
 
         if self._data_region_dock:
-           self._data_region_dock.setParent(None)
-           self._data_region_dock.label.setParent(None)
+            self._data_region_dock.close()
+            self._data_region_dock.destroy()
+            self._data_region_dock.setParent(None)
+            self._data_region_dock.label.setParent(None)
 
         if self._file_data_dock:
-           self._file_data_dock.setParent(None)
-           self._file_data_dock.label.setParent(None)
+            self._file_data_dock.close()
+            self._file_data_dock.destroy()
+            self._file_data_dock.setParent(None)
+            self._file_data_dock.label.setParent(None)
 
+
+
+    def createDocks(self,file_name="File Data"):
 
         appsize=APPGUI.get('size')
-
-        pos,(wx,wy) = APPGUI.get('data_views_area')
-        wx=wx*appsize[0]
-        wy=wy*appsize[1]
-
-        self._file_data_dock = Dock(file_name, size=(wx,wy/2))
-        self._area.addDock(self._file_data_dock, pos)
-
-        self._data_region_dock = Dock("Selected Region", size=(wx,wy/2))
-        self._area.addDock(self._data_region_dock, 'bottom',self._file_data_dock)
-
         pos,(wx,wy) = APPGUI.get('data_info_stats_area')
         wx=wx*appsize[0]
         wy=wy*appsize[1]
@@ -117,15 +124,24 @@ class EyePlot(QtGui.QMainWindow):
         self._area.addDock(self._region_tree_dock, 'above', self._param_tree_dock)
 
 
+        pos,(wx,wy) = APPGUI.get('data_views_area')
+        wx=wx*appsize[0]
+        wy=wy*appsize[1]
+
+        self._file_data_dock = Dock(file_name, size=(wx,wy/2))
+        self._area.addDock(self._file_data_dock, pos)
+
+        self._data_region_dock = Dock("Selected Region", size=(wx,wy/2))
+        self._area.addDock(self._data_region_dock, 'bottom',self._file_data_dock)
+
         self.createEmbeddedIPythonConsoleDock()
 
-        self.ipython_console.initDataState(self)
 
     def createActions(self):
         atext='Open an EDQ npy File.'
         aicon='folder_open_icon&32.png'
         self.openDataFileAction = ContextualStateAction(
-                                   # QtGui.QIcon(getIconFilePath(aicon)),
+                                    QtGui.QIcon(getIconFilePath(aicon)),
                                     'Open',
                                     self)
         self.openDataFileAction.setShortcut('Ctrl+O')
@@ -141,6 +157,15 @@ class EyePlot(QtGui.QMainWindow):
     def createMainToolbar(self):
         self.toolbarFile = self.addToolBar('File')
         self.toolbarFile.addAction(self.openDataFileAction)
+
+    def togglePlotLegendVisibility(self,param_handle, child_name, change, changed_param, show_legends):
+        pass
+        #if show_legends is True:
+        #    self._file_data_plot._legend = self._file_data_plot.getPlotItem().addLegend()
+        #    self._data_region_plot._legend = self._data_region_plot.getPlotItem().addLegend()
+        #else:
+        #    self._data_region_plot.getPlotItem().removeItem(self._data_region_plot._legend)
+        #    self._file_data_plot.getPlotItem().removeItem(self._file_data_plot._legend)
 
     def setSelectedSession(self, param_handle, child_name, change, changed_param, session_id):
         self._data_source.current_session_id=session_id
@@ -186,52 +211,87 @@ class EyePlot(QtGui.QMainWindow):
 
     def openDataFile(self):
         file_path = QtGui.QFileDialog.getOpenFileName(self, 'Open Data file', '.','*.npy')
+        if not file_path:
+            return
         file_path = nabs(file_path)
         _, file_name = os.path.split(file_path)
 
-        self.free()
-        self.createDocks(file_name)
+        if self._data_source:
+            self._data_source.close()
+            del self._data_source
+
         self._data_source = EyeSampleDataSource(file_path)
+        self.ipython_console.initDataState(self)
+
+        #self.createDocks(file_name)
 
         self.setSelectedSession(None,None,None,None,self._data_source.current_session_id)
         self.setSelectedTrials(self._data_source.current_trial_ids)
 
-        self._file_data_plot = EyeSampleTracePlot(self._data_source.time)
+        if self._file_data_plot:
+            self._file_data_plot.getPlotItem().clear()
+            self._file_data_plot.init(self._data_source.time, add_legend=True)
+        else:
+            self._file_data_plot = EyeSampleTracePlot(self._data_source.time, add_legend=True)
+            self._file_data_dock.addWidget(self._file_data_plot)
+
         self._file_data_plot.addTrace(self._data_source.target_angle_x, label='target_angle_x', color=(127,0,0), style='dash', connect='all')
         self._file_data_plot.addTrace(self._data_source.target_angle_y, label='target_angle_y', color=(255,76,76), style='dash', connect='all')
         self._file_data_plot.addTrace(self._data_source.left_angle_x, label='left_angle_x', color=(46,127,75), style='solid', connect='valid')#, connect='valid')
         self._file_data_plot.addTrace(self._data_source.left_angle_y, label='left_angle_y', color=(82,229,134), style='solid', connect='valid')#, connect='valid')
         self._file_data_plot.addTrace(self._data_source.right_angle_x, label='right_angle_x', color=(10,67,102), style='solid', connect='valid')#, connect='valid')
         self._file_data_plot.addTrace(self._data_source.right_angle_y, label='right_angle_y', color=(11,145,229), style='solid', connect='valid')#, connect='valid')
-        self._file_data_dock.addWidget(self._file_data_plot)
 
 
-        self._data_region_plot = EyeSampleTracePlot(self._data_source.time)
+        if self._data_region_plot:
+            self._data_region_plot.getPlotItem().clear()
+            self._data_region_plot.init(self._data_source.time)
+        else:
+            self._data_region_plot = EyeSampleTracePlot(self._data_source.time)
+            self._data_region_dock.addWidget(self._data_region_plot)
+
         self._data_region_plot.addTrace(self._data_source.target_angle_x, label='target_angle_x', color=(127,0,0), style='dash', connect='all')
         self._data_region_plot.addTrace(self._data_source.target_angle_y, label='target_angle_y', color=(255,76,76), style='dash', connect='all')
         self._data_region_plot.addTrace(self._data_source.left_angle_x, label='left_angle_x', color=(46,127,75), style='solid', connect='valid')#, connect='valid')
         self._data_region_plot.addTrace(self._data_source.left_angle_y, label='left_angle_y', color=(82,229,134), style='solid', connect='valid')#, connect='valid')
         self._data_region_plot.addTrace(self._data_source.right_angle_x, label='right_angle_x', color=(10,67,102), style='solid', connect='valid')#, connect='valid')
         self._data_region_plot.addTrace(self._data_source.right_angle_y, label='right_angle_y', color=(11,145,229), style='solid', connect='valid')#, connect='valid')
-
         self._data_region_plot.setAutoVisible(y=True)
-        self._data_region_dock.addWidget(self._data_region_plot)
 
 
-        self._region_tree = DataStats(self._data_region_plot, self._data_source)
-        self._region_tree_dock.addWidget(self._region_tree)
+        if self._region_tree:
+            self._region_tree.clear()
+        else:
+            self._region_tree = DataStats()
+            self._region_tree_dock.addWidget(self._region_tree)
+
+        self._region_tree.init(self._data_region_plot, self._data_source)
+
 
         self._data_region_plot.enableMouseCrossHairs(self._region_tree.updateCrosshairStats)
 
         self._region = self._file_data_plot.enableRegion([self._data_source.time.min, self._data_source.time.min+2.0],
-                                 update_callback=self._region_tree.updateRegionRelatedStats,
-                                 associated_plot=self._data_region_plot)
+                             update_callback=self._region_tree.updateRegionRelatedStats,
+                             associated_plot=self._data_region_plot)
 
-        self._plot_param_tree, self._plot_params = createPlotParamTree(self._data_source.session_label2id_mapping,
+
+        if self._plot_param_tree:
+            self._plot_param_tree.clear()
+            self._plot_params.clearChildren()
+            self._plot_params._param_node_dict.clear()
+            self._plot_params._plotParamChangeHandlers.clear()
+
+            self._plot_param_tree, self._plot_params = createPlotParamTree(self._data_source.session_label2id_mapping,
+                                                                       self.getSelectedSessionID(),
+                                                                       self.getTrialIDs(),
+                                                                       self.getSelectedTrialIDs(),self._plot_param_tree)
+        else:
+            self._plot_param_tree, self._plot_params = createPlotParamTree(self._data_source.session_label2id_mapping,
                                                                        self.getSelectedSessionID(),
                                                                        self.getTrialIDs(),
                                                                        self.getSelectedTrialIDs())
-        self._param_tree_dock.addWidget(self._plot_param_tree)
+            self._param_tree_dock.addWidget(self._plot_param_tree)
+
         self._plot_params.addParamChangeHandler("left_angle_x_pen_color", "value", self.updateParamSetting)
         self._plot_params.addParamChangeHandler("left_angle_y_pen_color", "value", self.updateParamSetting)
         self._plot_params.addParamChangeHandler("right_angle_x_pen_color", "value", self.updateParamSetting)
@@ -239,6 +299,7 @@ class EyePlot(QtGui.QMainWindow):
         self._plot_params.addParamChangeHandler("target_angle_x_pen_color", "value", self.updateParamSetting)
         self._plot_params.addParamChangeHandler("target_angle_y_pen_color", "value", self.updateParamSetting)
         self._plot_params.addParamChangeHandler("session_id_selection", "value", self.setSelectedSession)
+        self._plot_params.addParamChangeHandler("show_traceplot_legend", "value", self.togglePlotLegendVisibility)
 
         self._plot_params.param('Eye Sample Selection','Target Display Index Selection','First Target Index').sigValueChanged.connect(self.firstTargetSelectionChanged)
         self._plot_params.param('Eye Sample Selection','Target Display Index Selection','Plot Target Count').sigValueChanged.connect(self.targetSelectCountChanged)
@@ -267,7 +328,7 @@ class EyePlot(QtGui.QMainWindow):
         self.console_dock = Dock("Console", size=(dwidth,dheight))
         self.ipython_console=EmbeddedIPythonConsole()
         self.console_dock.addWidget(self.ipython_console.getWidget())
-        self._area.addDock(self.console_dock, dock_pos)
+        self._area.addDock(self.console_dock, 'bottom',self._data_region_dock)
         #self.sigCurrentProjectChanged.connect(self.ipython_console.handleProjectChange)
 
     def free(self):
